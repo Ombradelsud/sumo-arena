@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sumo Arena HD</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; /* Disabilita zoom/scroll browser */ }
+        body { margin: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; }
 
         /* UI LOGIN */
         #ui { 
@@ -15,10 +15,13 @@
             z-index: 20; width: 350px; max-height: 90vh; overflow-y: auto;
         }
         h1 { color: #ff4757; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 2px; font-size: 1.8em; }
-        input[type="text"] { background: #333; border: 1px solid #555; color: white; padding: 10px; font-size: 1em; border-radius: 8px; width: 90%; text-align: center; margin-bottom: 10px; outline: none; }
-        input[type="text"]:focus { border-color: #ff4757; }
         
-        /* UPLOAD FOTO */
+        input[type="text"], input[type="number"] {
+            background: #333; border: 1px solid #555; color: white; padding: 10px;
+            font-size: 1em; border-radius: 8px; width: 90%; text-align: center; margin-bottom: 10px; outline: none;
+        }
+        input[type="text"]:focus, input[type="number"]:focus { border-color: #ff4757; }
+
         .skin-upload-container { margin: 15px 0; cursor: pointer; position: relative; display: inline-block; }
         #skinPreview { width: 80px; height: 80px; border-radius: 50%; background: #333; border: 3px solid #ff4757; object-fit: cover; }
         #skinInput { display: none; }
@@ -27,18 +30,33 @@
         .stats-box { display: flex; gap: 10px; margin: 15px 0; }
         .stat { background: #222; padding: 8px; border-radius: 5px; flex: 1; border: 1px solid #333; font-size: 0.9em; }
         input[type=range] { width: 100%; accent-color: #ff4757; cursor: pointer; }
-        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; }
         
         #active-rooms { margin-top: 20px; text-align: left; border-top: 1px solid #444; padding-top: 10px; }
         .room-item { background: #2d3436; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #444; }
         .room-count { background: #222; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; color: #2ed573; }
-
-        #gameCanvas { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
         
-        /* ZONE PER IL JOYSTICK (Tutto lo schermo tranne UI) */
+        /* GIOCO */
+        #gameCanvas { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: none; }
 
-        #overlay { display: none; position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.6); font-weight: bold; z-index: 10; }
+        #overlay { display: none; position: absolute; top: 50px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.6); font-weight: bold; z-index: 10; }
+        
+        #roundInfo { 
+            display: none; position: absolute; top: 10px; width: 100%; text-align: center; 
+            font-size: 1.5em; font-weight: bold; color: #f1c40f; text-shadow: 0 2px 4px black; z-index: 10; pointer-events: none; 
+        }
+
+        #spectatorMsg { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 3em; color: #ff4757; font-weight: bold; display: none; pointer-events: none; text-shadow: 0 0 20px black; text-align: center; z-index: 15;
+        }
+
+        #roundEndMsg {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 10px; border: 2px solid #f1c40f;
+            font-size: 1.5em; color: white; text-align: center; display: none; z-index: 20; pointer-events: none;
+        }
+
         #sidebar { display: none; position: absolute; top: 0; right: 0; width: 200px; height: 100%; background: rgba(0,0,0,0.5); padding: 10px; box-sizing: border-box; pointer-events: none; z-index: 10; }
         .player-alive { color: #2ed573; margin-bottom: 3px; font-size: 0.9em; }
         .player-dead { color: #ff4757; text-decoration: line-through; opacity: 0.7; font-size: 0.9em; }
@@ -49,6 +67,7 @@
         th { border-bottom: 1px solid #555; padding: 10px; color: #aaa; }
         td { padding: 10px; border-bottom: 1px solid #333; }
         .rank-1 { color: #f1c40f; font-weight: bold; }
+        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -57,14 +76,19 @@
         <h1>Sumo Arena HD</h1>
         
         <div class="skin-upload-container" onclick="document.getElementById('skinInput').click()">
-            <img id="skinPreview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Tocca per foto">
+            <img id="skinPreview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Foto">
             <input type="file" id="skinInput" accept="image/*">
             <span class="skin-label">📷 Carica Foto</span>
         </div>
 
         <input type="text" id="nickname" placeholder="Il tuo Nome" maxlength="12">
-        <input type="text" id="roomName" placeholder="Crea Nuova Arena..." maxlength="15">
+        <input type="text" id="roomName" placeholder="Nome Arena" maxlength="15">
         
+        <div style="display:flex; gap:10px; align-items:center; justify-content:center; margin-bottom:10px;">
+            <label>Round:</label>
+            <input type="number" id="roundsInput" min="1" max="10" value="3" style="width:60px; margin:0;">
+        </div>
+
         <div class="stats-box">
             <div class="stat"><label>PESO: <span id="massVal">50</span></label><input type="range" id="massRange" min="10" max="90" value="50"></div>
             <div class="stat"><label>GRIP: <span id="fricVal">50</span></label><progress id="fricBar" value="50" max="90" style="width:100%; height:5px;"></progress></div>
@@ -74,14 +98,23 @@
     </div>
 
     <div id="joystickZone"></div>
-
+    <div id="roundInfo">ROUND 1 / 3</div>
     <div id="overlay">Clicca o Usa il Joystick per SPINGERE</div>
+    
+    <div id="spectatorMsg">ELIMINATO<br><span style="font-size:0.4em; color:white">Attendi il prossimo round...</span></div>
+    
+    <div id="roundEndMsg">
+        <div style="font-size:0.8em; color:#aaa">ROUND VINTO DA</div>
+        <div id="roundWinnerName" style="color:#f1c40f; font-size:1.5em; font-weight:bold; margin:10px 0;">Nome</div>
+        <div style="font-size:0.8em;">Prossimo round in 3s...</div>
+    </div>
+
     <div id="sidebar"><div style="color:#aaa; border-bottom:1px solid #444; margin-bottom:5px;">IN GARA</div><div id="playerList"></div></div>
     
     <div id="victoryScreen">
-        <div class="win-title">PARTITA FINITA</div>
-        <table id="leaderboardTable"><thead><tr><th>#</th><th>GIOCATORE</th></tr></thead><tbody></tbody></table>
-        <button onclick="location.reload()" style="width:100%; background:#2ed573; padding:15px; border-radius:50px; border:none; color:white; font-size:1.2em; font-weight:bold;">TORNA ALLA LOBBY</button>
+        <div class="win-title">TORNEO FINITO</div>
+        <table id="leaderboardTable"><thead><tr><th>#</th><th>GIOCATORE</th><th>VITTORIE</th></tr></thead><tbody></tbody></table>
+        <button onclick="location.reload()" style="background:#2ed573;">TORNA ALLA LOBBY</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -100,16 +133,12 @@
         let gameRunning = false;
         let dpr = 1;
         
-        // --- VARIABILI INPUT ---
         let mouseX = 0, mouseY = 0;
         let isPushing = false;
-        
-        // Variabili Joystick
         let joystickManager = null;
         let joystickActive = false;
-        let joystickAngle = 0; // In radianti
+        let joystickAngle = 0;
         
-        // Gestione Foto
         let mySkinData = null;
         const imageCache = {};
         const savedSkin = localStorage.getItem('sumoSkin');
@@ -126,17 +155,15 @@
                     const tempCtx = tempCanvas.getContext('2d');
                     tempCanvas.width = 100; tempCanvas.height = 100;
                     tempCtx.drawImage(img, 0, 0, 100, 100);
-                    const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
-                    mySkinData = dataUrl;
-                    document.getElementById('skinPreview').src = dataUrl;
-                    localStorage.setItem('sumoSkin', dataUrl);
+                    mySkinData = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('skinPreview').src = mySkinData;
+                    localStorage.setItem('sumoSkin', mySkinData);
                 }
                 img.src = event.target.result;
             }
             reader.readAsDataURL(file);
         });
 
-        // UI Stats
         const massInput = document.getElementById('massRange');
         massInput.oninput = () => {
             let m = parseInt(massInput.value);
@@ -159,72 +186,79 @@
         function joinGame() {
             let room = document.getElementById('roomName').value.trim();
             let name = document.getElementById('nickname').value.trim();
+            let rounds = document.getElementById('roundsInput').value;
             if(!room) { alert("Scegli un'arena!"); return; }
             if(!name) name = "Combattente";
             
-            socket.emit('join_game', { room: room, name: name, mass: parseInt(massInput.value), skin: mySkinData });
+            socket.emit('join_game', { 
+                room: room, 
+                name: name, 
+                mass: parseInt(massInput.value), 
+                skin: mySkinData,
+                totalRounds: rounds // INVIO NUMERO ROUND
+            });
         }
 
-        socket.on('joined_success', () => {
+        socket.on('joined_success', (data) => {
             uiDiv.style.display = 'none';
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('sidebar').style.display = 'block';
-            document.getElementById('joystickZone').style.display = 'block'; // Attiva zona joystick
+            document.getElementById('joystickZone').style.display = 'block';
+            document.getElementById('roundInfo').style.display = 'block';
             canvas.style.display = 'block';
             gameRunning = true;
             resize(); 
-            initJoystick(); // AVVIA JOYSTICK
+            initJoystick();
         });
 
-        // --- INIZIALIZZAZIONE JOYSTICK ---
         function initJoystick() {
-            joystickManager = nipplejs.create({
-                zone: document.getElementById('joystickZone'),
-                mode: 'dynamic', // Appare ovunque tocchi
-                color: 'white',
-                size: 100
-            });
-
-            // Quando muovi il joystick
-            joystickManager.on('move', (evt, data) => {
-                joystickActive = true;
-                if(data && data.angle) {
-                    // Nipplejs usa i radianti invertiti rispetto a canvas a volte, ma di solito:
-                    // 0 è destra, PI/2 è su (o giù).
-                    // Canvas: Math.atan2(y, x). 
-                    // Invertiamo Y per sicurezza? No, nipplejs dà .angle.radian standard
-                    // Ma attenzione: NippleJs Y cresce verso l'alto (cartesiano), Canvas Y verso il basso.
-                    // Quindi dobbiamo invertire l'angolo.
-                    joystickAngle = -data.angle.radian; 
-                    isPushing = true; // Muovere = Spingere
-                }
-            });
-
-            // Quando lasci il joystick
-            joystickManager.on('end', (evt, data) => {
-                joystickActive = false;
-                isPushing = false;
-            });
+            if(joystickManager) joystickManager.destroy();
+            joystickManager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'dynamic', color: 'white', size: 100 });
+            joystickManager.on('move', (evt, data) => { joystickActive = true; if(data && data.angle) { joystickAngle = -data.angle.radian; isPushing = true; } });
+            joystickManager.on('end', () => { joystickActive = false; isPushing = false; });
         }
 
         socket.on('connect', () => myId = socket.id);
-        socket.on('you_died', () => { isSpectator = true; document.getElementById('overlay').innerText = "SPETTATORE"; });
+        
+        // MORTE NEL ROUND
+        socket.on('you_died', () => { 
+            isSpectator = true; 
+            document.getElementById('spectatorMsg').style.display = 'block'; 
+            document.getElementById('overlay').style.display = 'none'; 
+        });
+
+        // FINE DI UN SINGOLO ROUND
+        socket.on('round_end', (data) => {
+            document.getElementById('roundWinnerName').innerText = data.winnerName;
+            document.getElementById('roundEndMsg').style.display = 'block';
+        });
+
+        // RESPAWN (NUOVO ROUND)
+        socket.on('respawn', (data) => {
+            isSpectator = false; // Torni vivo!
+            document.getElementById('spectatorMsg').style.display = 'none';
+            document.getElementById('roundEndMsg').style.display = 'none';
+            document.getElementById('overlay').style.display = 'block';
+        });
+
+        // FINE TORNEO
         socket.on('game_over', (data) => {
             gameRunning = false;
             document.getElementById('victoryScreen').style.display = 'block';
-            document.querySelector('.win-title').innerText = `VINCITORE: ${data.winnerName}`;
+            document.getElementById('roundInfo').style.display = 'none';
+            document.getElementById('roundEndMsg').style.display = 'none';
+            
             const tbody = document.querySelector('#leaderboardTable tbody');
             tbody.innerHTML = '';
-            data.leaderboard.forEach(p => {
-                tbody.innerHTML += `<tr class="${p.rank===1?'rank-1':''}"><td>#${p.rank}</td><td>${p.name}</td></tr>`;
+            // Classifica basata su SCORE (vittorie)
+            data.leaderboard.forEach((p, index) => {
+                let rankClass = index === 0 ? 'rank-1' : '';
+                tbody.innerHTML += `<tr class="${rankClass}"><td>#${index+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
             });
-            if(joystickManager) joystickManager.destroy(); // Distruggi joystick a fine partita
+            if(joystickManager) joystickManager.destroy();
         });
 
-        // --- INPUT MOUSE (PC) ---
         function updatePos(cx, cy) { mouseX = cx - window.innerWidth/2; mouseY = cy - window.innerHeight/2; }
-        
-        // Se si usa il joystick, ignoriamo il mouse
         window.addEventListener('mousemove', e=>updatePos(e.clientX, e.clientY));
         window.addEventListener('mousedown', ()=> { if(!joystickActive) isPushing=true; }); 
         window.addEventListener('mouseup', ()=> { if(!joystickActive) isPushing=false; });
@@ -237,29 +271,18 @@
         }
         window.onresize = resize;
 
-        // --- GAME LOOP DI INVIO DATI ---
         setInterval(() => {
             if (!gameRunning || !myId || isSpectator) return;
-            
-            let finalAngle;
-            let finalPush;
-
-            if (joystickActive) {
-                // Se uso il joystick, comando lui
-                finalAngle = joystickAngle;
-                finalPush = true; // Il joystick spinge sempre quando è mosso
-            } else {
-                // Altrimenti uso il mouse
-                finalAngle = Math.atan2(mouseY, mouseX);
-                finalPush = isPushing;
-            }
-
+            let finalAngle = joystickActive ? joystickAngle : Math.atan2(mouseY, mouseX);
+            let finalPush = joystickActive ? true : isPushing;
             socket.emit('input', { angle: finalAngle, isPushing: finalPush });
         }, 50);
 
-        // --- RENDER ---
         socket.on('state', (state) => {
             if (!gameRunning) return;
+
+            // Aggiorna Round Info
+            document.getElementById('roundInfo').innerText = `ROUND ${state.round} / ${state.totalRounds}`;
 
             let listHtml = '';
             for(let id in state.players) listHtml += `<div class="player-alive">${state.players[id].name}</div>`;
@@ -283,7 +306,6 @@
             // Players
             for (let id in state.players) {
                 let p = state.players[id];
-                
                 ctx.save(); 
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.clip(); 
@@ -305,18 +327,12 @@
                 ctx.fillText(p.name, 0, -(p.radius * scale) - 15);
                 ctx.restore();
 
-                // Freccia Direzionale
                 if (id === myId && !isSpectator) {
                     ctx.save(); ctx.translate(p.x, p.y); 
-                    
-                    // Decidi quale angolo mostrare (Mouse o Joystick)
                     let displayAngle = joystickActive ? joystickAngle : Math.atan2(mouseY, mouseX);
                     ctx.rotate(displayAngle);
-
                     ctx.beginPath(); let len = p.radius + 40;
-                    // Se sto spingendo (Mouse Click o Joystick Attivo)
                     let showingPush = isPushing || joystickActive;
-
                     if(showingPush){
                         ctx.strokeStyle='#ff4757'; ctx.lineWidth=6;
                         ctx.moveTo(p.radius,0); ctx.lineTo(len,0); ctx.stroke();
