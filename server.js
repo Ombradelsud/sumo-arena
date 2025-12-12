@@ -12,16 +12,14 @@ const SCALE_RATIO = 50;
 
 let rooms = {};
 
-// --- FUNZIONI FISICA ---
+// --- FUNZIONI UTILI ---
 function checkCollision(p1, p2) {
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
+    const dx = p1.x - p2.x; const dy = p1.y - p2.y;
     return Math.sqrt(dx * dx + dy * dy) < p1.radius + p2.radius;
 }
 
 function resolveCollision(p1, p2) {
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
+    const dx = p1.x - p2.x; const dy = p1.y - p2.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     if (distance === 0) return;
     const nx = dx / distance; const ny = dy / distance;
@@ -36,6 +34,25 @@ function resolveCollision(p1, p2) {
     p2.vx -= (impulseX / p2.mass); p2.vy -= (impulseY / p2.mass);
 }
 
+// Funzione per creare un oggetto giocatore "Fisico" partendo dai dati statici
+function createPlayerEntity(participantData) {
+    let mass = participantData.mass;
+    let radius = 15 + (mass * 0.5);
+    return {
+        id: participantData.id,
+        name: participantData.name,
+        skin: participantData.skin,
+        color: participantData.color,
+        mass: mass,
+        friction: 0.9 + ((100 - mass) / 1000),
+        radius: radius,
+        x: (Math.random() * 400) - 200, 
+        y: (Math.random() * 400) - 200,
+        vx: 0, vy: 0,
+        inputAngle: null, isPushing: false
+    };
+}
+
 io.on('connection', (socket) => {
     let currentRoom = null;
 
@@ -44,12 +61,25 @@ io.on('connection', (socket) => {
         let safeName = (config.name || "Ospite").substring(0, 12).replace(/[^a-zA-Z0-9 ]/g, "");
         if(!safeName.trim()) safeName = "Ospite";
 
+        // CREAZIONE STANZA
         if (!rooms[roomName]) {
-            rooms[roomName] = { players: {}, eliminated: [], arenaRadius: BASE_ARENA_RADIUS };
+            let rounds = parseInt(config.totalRounds) || 1;
+            if(rounds < 1) rounds = 1; 
+            if(rounds > 10) rounds = 10;
+
+            rooms[roomName] = { 
+                players: {},        // Entità fisiche in gioco ora
+                participants: {},   // Dati di tutti i giocatori (per respawn e punteggi)
+                eliminated: [],     // Lista morti del round corrente
+                arenaRadius: BASE_ARENA_RADIUS,
+                currentRound: 1,
+                totalRounds: rounds,
+                status: 'waiting'   // waiting, playing, cooldown
+            };
         }
         const room = rooms[roomName];
 
-        if (Object.keys(room.players).length >= 20) {
+        if (Object.keys(room.participants).length >= 20) {
             socket.emit('error_msg', 'Stanza piena!');
             return;
         }
@@ -57,23 +87,31 @@ io.on('connection', (socket) => {
         socket.join(roomName);
         currentRoom = roomName;
 
+        // Salviamo i dati del partecipante
         let mass = Math.max(10, Math.min(90, config.mass));
-        let radius = 15 + (mass * 0.5);
-
-        room.players[socket.id] = {
-            id: socket.id, 
-            name: safeName, 
-            room: roomName,
-            skin: config.skin || null, // <--- QUI SALVIAMO LA FOTO
-            x: (Math.random() * 400) - 200, 
-            y: (Math.random() * 400) - 200,
-            vx: 0, vy: 0, mass: mass, friction: 0.9 + ((100 - mass) / 1000),
-            radius: radius, 
-            color: 'hsl(' + Math.random() * 360 + ', 70%, 50%)', 
-            inputAngle: null, isPushing: false
+        
+        const participant = {
+            id: socket.id,
+            name: safeName,
+            mass: mass,
+            skin: config.skin || null,
+            color: 'hsl(' + Math.random() * 360 + ', 70%, 50%)',
+            score: 0 // Vittorie totali
         };
 
-        socket.emit('joined_success', { roomName: roomName });
+        room.participants[socket.id] = participant;
+        
+        // Se il gioco è in attesa o sta giocando, lo aggiungiamo subito alla fisica
+        // (Chi entra a round iniziato spawna subito? Sì, per semplicità)
+        room.players[socket.id] = createPlayerEntity(participant);
+
+        if(room.status === 'waiting') room.status = 'playing';
+
+        socket.emit('joined_success', { 
+            roomName: roomName, 
+            currentRound: room.currentRound, 
+            totalRounds: room.totalRounds 
+        });
     });
 
     socket.on('input', (data) => {
@@ -85,8 +123,13 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         if (currentRoom && rooms[currentRoom]) {
+            // Rimuovi dalla fisica
             if (rooms[currentRoom].players[socket.id]) delete rooms[currentRoom].players[socket.id];
-            if(Object.keys(rooms[currentRoom].players).length === 0) {
+            // Rimuovi dai partecipanti (per sempre)
+            if (rooms[currentRoom].participants[socket.id]) delete rooms[currentRoom].participants[socket.id];
+
+            // Se stanza vuota, cancella
+            if(Object.keys(rooms[currentRoom].participants).length === 0) {
                 delete rooms[currentRoom];
             }
         }
@@ -97,27 +140,79 @@ io.on('connection', (socket) => {
 setInterval(() => {
     for (const roomName in rooms) {
         const room = rooms[roomName];
+        
+        // Se siamo in cooldown (pausa tra round), non calcolare fisica
+        if (room.status === 'cooldown') continue;
+
         const playerIds = Object.keys(room.players);
+        // Se non c'è nessuno (o solo 1 in attesa di avversari all'inizio), salta check vittoria
+        // (Ma lasciamo muovere la fisica per divertimento)
 
-        if (playerIds.length === 0) continue;
-
-        // WIN CONDITION
+        // --- WIN CONDITION DEL ROUND ---
+        // Almeno 1 eliminato (significa che si sono scontrati) E rimane solo 1 vivo
         if (playerIds.length === 1 && room.eliminated.length > 0) {
             const winnerId = playerIds[0];
-            const winner = room.players[winnerId];
-            room.eliminated.unshift({ name: winner.name, rank: 1, isWinner: true });
-            io.to(roomName).emit('game_over', { leaderboard: room.eliminated, winnerName: winner.name });
-            delete rooms[roomName];
+            const winner = room.participants[winnerId]; // Prendi dati da participants
+            
+            if(winner) {
+                winner.score += 1; // Aumenta punteggio totale
+                
+                // Aggiungilo alla lista eliminati del round come PRIMO (Rank 1)
+                room.eliminated.unshift({ name: winner.name, rank: 1, isWinner: true });
+            }
+
+            // CONTROLLO FINE TORNEO
+            if (room.currentRound >= room.totalRounds) {
+                // PARTITA FINITA DEFINITIVAMENTE
+                // Calcoliamo classifica finale basata sui punteggi (score)
+                let finalLeaderboard = Object.values(room.participants).sort((a,b) => b.score - a.score);
+                
+                io.to(roomName).emit('game_over', { 
+                    leaderboard: finalLeaderboard, 
+                    winnerName: finalLeaderboard[0].name 
+                });
+                
+                delete rooms[roomName]; // Cancella stanza
+                continue;
+
+            } else {
+                // FINE ROUND (Ma non Torneo)
+                room.status = 'cooldown'; // Blocca fisica
+                io.to(roomName).emit('round_end', { 
+                    winnerName: winner ? winner.name : "Nessuno",
+                    nextRound: room.currentRound + 1
+                });
+
+                // AVVIA PROSSIMO ROUND DOPO 3 SECONDI
+                setTimeout(() => {
+                    // Check se la stanza esiste ancora (potrebbero essersi disconnessi tutti)
+                    if(!rooms[roomName]) return; 
+                    
+                    const r = rooms[roomName];
+                    r.currentRound++;
+                    r.status = 'playing';
+                    r.arenaRadius = BASE_ARENA_RADIUS;
+                    r.eliminated = []; // Resetta morti del round
+                    r.players = {}; // Svuota fisica vecchia
+
+                    // RESPANA TUTTI I PARTECIPANTI
+                    for (let pid in r.participants) {
+                        r.players[pid] = createPlayerEntity(r.participants[pid]);
+                        // Avvisa i client che sono vivi
+                        io.to(pid).emit('respawn', { round: r.currentRound });
+                    }
+
+                }, 3000);
+            }
             continue; 
         }
 
-        // Arena Logic
+        // --- ARENA & FISICA (Standard) ---
         let totalArea = 0;
         playerIds.forEach(id => totalArea += Math.PI * Math.pow(room.players[id].radius, 2));
         let targetRadius = Math.max(400, Math.sqrt((totalArea * SCALE_RATIO) / Math.PI));
         room.arenaRadius += (targetRadius - room.arenaRadius) * 0.01;
 
-        // Physics Logic
         playerIds.forEach(id => {
             let p = room.players[id];
             if (p.isPushing && p.inputAngle !== null) {
@@ -128,14 +223,13 @@ setInterval(() => {
             p.vx *= p.friction; p.vy *= p.friction; p.x += p.vx; p.y += p.vy;
 
             if (Math.sqrt(p.x*p.x + p.y*p.y) > room.arenaRadius + p.radius) {
-                const rank = playerIds.length;
+                const rank = playerIds.length; // Posizione in questo round
                 room.eliminated.unshift({ name: p.name, rank: rank });
                 io.to(p.id).emit('you_died', { rank: rank });
                 delete room.players[id];
             }
         });
 
-        // Collision Logic
         for (let i = 0; i < playerIds.length; i++) {
             for (let j = i + 1; j < playerIds.length; j++) {
                 let p1 = room.players[playerIds[i]];
@@ -151,7 +245,15 @@ setInterval(() => {
                 }
             }
         }
-        io.to(roomName).emit('state', { players: room.players, arenaRadius: room.arenaRadius, eliminated: room.eliminated });
+
+        // Invia update (includiamo il round corrente)
+        io.to(roomName).emit('state', { 
+            players: room.players, 
+            arenaRadius: room.arenaRadius, 
+            eliminated: room.eliminated,
+            round: room.currentRound,
+            totalRounds: room.totalRounds
+        });
     }
 }, GAME_SPEED);
 
@@ -159,7 +261,7 @@ setInterval(() => {
 setInterval(() => {
     const roomList = [];
     for(let name in rooms) {
-        roomList.push({ name: name, count: Object.keys(rooms[name].players).length });
+        roomList.push({ name: name, count: Object.keys(rooms[name].participants).length });
     }
     io.emit('room_list_update', roomList);
 }, 1000);
