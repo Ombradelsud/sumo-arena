@@ -61,10 +61,15 @@ io.on('connection', (socket) => {
         let radius = 15 + (mass * 0.5);
 
         room.players[socket.id] = {
-            id: socket.id, name: safeName, room: roomName,
-            x: (Math.random() * 400) - 200, y: (Math.random() * 400) - 200,
+            id: socket.id, 
+            name: safeName, 
+            room: roomName,
+            skin: config.skin || null, // <--- QUI SALVIAMO LA FOTO
+            x: (Math.random() * 400) - 200, 
+            y: (Math.random() * 400) - 200,
             vx: 0, vy: 0, mass: mass, friction: 0.9 + ((100 - mass) / 1000),
-            radius: radius, color: 'hsl(' + Math.random() * 360 + ', 70%, 50%)', 
+            radius: radius, 
+            color: 'hsl(' + Math.random() * 360 + ', 70%, 50%)', 
             inputAngle: null, isPushing: false
         };
 
@@ -96,26 +101,15 @@ setInterval(() => {
 
         if (playerIds.length === 0) continue;
 
-        // --- WIN CONDITION (Modificata per Classifica) ---
-        // Se c'è solo 1 giocatore e la partita era iniziata (c'è almeno un eliminato)
+        // WIN CONDITION
         if (playerIds.length === 1 && room.eliminated.length > 0) {
             const winnerId = playerIds[0];
             const winner = room.players[winnerId];
-
-            // Aggiungi il vincitore in cima alla lista eliminati con Rank 1
             room.eliminated.unshift({ name: winner.name, rank: 1, isWinner: true });
-
-            // Invia la classifica completa a tutti
-            io.to(roomName).emit('game_over', { 
-                leaderboard: room.eliminated,
-                winnerName: winner.name
-            });
-
-            // Chiudi la stanza
+            io.to(roomName).emit('game_over', { leaderboard: room.eliminated, winnerName: winner.name });
             delete rooms[roomName];
             continue; 
         }
-        // ------------------------------------------------
 
         // Arena Logic
         let totalArea = 0;
@@ -133,10 +127,8 @@ setInterval(() => {
             }
             p.vx *= p.friction; p.vy *= p.friction; p.x += p.vx; p.y += p.vy;
 
-            // Check Eliminazione
             if (Math.sqrt(p.x*p.x + p.y*p.y) > room.arenaRadius + p.radius) {
                 const rank = playerIds.length;
-                // Aggiungi alla lista (unshift mette in testa all'array)
                 room.eliminated.unshift({ name: p.name, rank: rank });
                 io.to(p.id).emit('you_died', { rank: rank });
                 delete room.players[id];
@@ -159,7 +151,6 @@ setInterval(() => {
                 }
             }
         }
-
         io.to(roomName).emit('state', { players: room.players, arenaRadius: room.arenaRadius, eliminated: room.eliminated });
     }
 }, GAME_SPEED);
