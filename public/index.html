@@ -7,43 +7,72 @@
     <style>
         body { margin: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; }
 
-        /* UI GENERALE */
+        /* --- STILI UI CONDIVISI --- */
         .panel { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            text-align: center; background: rgba(10, 10, 10, 0.95); padding: 30px;
+            text-align: center; background: rgba(15, 15, 15, 0.98); padding: 30px;
             border-radius: 15px; border: 1px solid #444; box-shadow: 0 0 50px rgba(0,0,0,0.8);
             z-index: 20; width: 350px; max-height: 90vh; overflow-y: auto;
         }
 
-        h1 { color: #ff4757; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 2px; }
+        h1 { color: #ff4757; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 2px; font-size: 1.8em; }
         
         input[type="text"], input[type="number"] {
             background: #333; border: 1px solid #555; color: white; padding: 10px;
             font-size: 1em; border-radius: 8px; width: 90%; text-align: center; margin-bottom: 10px; outline: none;
         }
+        input[type="text"]:focus, input[type="number"]:focus { border-color: #ff4757; }
         
-        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; }
-        button:disabled { background: #555; cursor: not-allowed; }
+        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.2s; }
+        button:hover { background: #ff6b81; transform: scale(1.02); }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #555; cursor: not-allowed; transform: none; }
 
-        /* LOBBY ATTESA */
+        /* 1. LOGIN SCREEN */
+        .skin-upload-container { margin: 15px 0; cursor: pointer; position: relative; display: inline-block; }
+        #skinPreview { width: 80px; height: 80px; border-radius: 12px; background: #333; border: 3px solid #ff4757; object-fit: cover; }
+        .skin-label { display: block; font-size: 0.8em; color: #aaa; margin-top: 5px; }
+        
+        .stats-row { display: flex; gap: 10px; margin: 10px 0; }
+        .stat-box { background: #222; padding: 8px; border-radius: 5px; flex: 1; border: 1px solid #333; font-size: 0.9em; }
+        input[type=range] { width: 100%; accent-color: #ff4757; cursor: pointer; }
+
+        #active-rooms { margin-top: 20px; text-align: left; border-top: 1px solid #444; padding-top: 10px; }
+        .room-item { background: #2d3436; padding: 8px; margin-bottom: 4px; border-radius: 4px; display: flex; justify-content: space-between; cursor: pointer; border: 1px solid #444; font-size: 0.9em; }
+        .room-item:hover { border-color: #ff4757; background: #333; }
+
+        /* 2. LOBBY SCREEN */
         #lobbyScreen { display: none; }
-        .lobby-list { text-align: left; background: #222; padding: 10px; border-radius: 8px; margin: 10px 0; min-height: 100px; }
-        .lobby-player { padding: 5px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
-        .is-host { color: #f1c40f; font-weight: bold; }
+        .lobby-list { text-align: left; background: #222; padding: 10px; border-radius: 8px; margin: 15px 0; min-height: 100px; max-height: 300px; overflow-y: auto; }
+        .lobby-player { padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .lobby-player:last-child { border-bottom: none; }
+        .host-badge { color: #f1c40f; margin-right: 5px; }
 
-        /* GIOCO */
+        /* 3. VICTORY SCREEN */
+        #victoryScreen { display: none; width: 400px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { text-align: left; border-bottom: 1px solid #555; padding: 10px; color: #aaa; font-size: 0.8em; }
+        td { padding: 10px; border-bottom: 1px solid #333; }
+        .rank-1 { color: #f1c40f; font-weight: bold; font-size: 1.1em; } 
+        .rank-2 { color: #bdc3c7; } 
+        .rank-3 { color: #d35400; }
+
+        /* HUD GIOCO */
         #gameCanvas { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: none; }
-        #roundInfo { display: none; position: absolute; top: 10px; width: 100%; text-align: center; font-size: 1.5em; font-weight: bold; color: #f1c40f; z-index: 10; pointer-events: none; text-shadow: 2px 2px 0 #000; }
-        #overlay { display: none; position: absolute; top: 50px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.6); z-index: 10; }
+
+        #topHud { display: none; position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none; z-index: 10; }
+        #roundDisplay { font-size: 1.8em; font-weight: 900; color: #f1c40f; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; }
         
-        #victoryScreen { display: none; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        td { padding: 8px; border-bottom: 1px solid #333; }
-        
-        /* Skin Preview */
-        .skin-upload-container { margin: 15px 0; cursor: pointer; }
-        #skinPreview { width: 70px; height: 70px; border-radius: 10px; border: 3px solid #ff4757; object-fit: cover; }
+        #overlayInstruction { display: none; position: absolute; top: 60px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.5); font-weight: bold; z-index: 10; font-size: 0.9em; }
+
+        #centerMsg { 
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; z-index: 30; pointer-events: none; width: 100%;
+        }
+        .msg-box { background: rgba(0,0,0,0.85); padding: 20px; border: 2px solid #ff4757; display: inline-block; border-radius: 10px; }
+        .big-text { font-size: 2em; font-weight: bold; color: white; text-shadow: 2px 2px 0 black; margin-bottom: 5px; }
+        .sub-text { color: #aaa; font-size: 1em; }
     </style>
 </head>
 <body>
@@ -54,58 +83,71 @@
         <div class="skin-upload-container" onclick="document.getElementById('skinInput').click()">
             <img id="skinPreview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
             <input type="file" id="skinInput" accept="image/*" style="display:none">
-            <div style="font-size:0.8em; color:#aaa">Carica Foto</div>
+            <span class="skin-label">📷 Carica Foto</span>
         </div>
 
-        <input type="text" id="nickname" placeholder="Tuo Nome" maxlength="12">
+        <input type="text" id="nickname" placeholder="Il tuo Nome" maxlength="12">
         <input type="text" id="roomName" placeholder="Nome Arena" maxlength="15">
         
-        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
+        <div class="stats-row" style="align-items: center; justify-content: center;">
             <label>Round (Max 10):</label>
-            <input type="number" id="roundsInput" min="1" max="10" value="3" style="width:60px;">
+            <input type="number" id="roundsInput" min="1" max="10" value="3" style="width:60px; margin:0;">
         </div>
 
-        <div style="display:flex; gap:10px; margin:10px 0;">
-            <div style="flex:1; background:#222; padding:5px; border-radius:5px;">Peso: <span id="massVal">50</span><br><input type="range" id="massRange" min="10" max="90" value="50" style="width:100%"></div>
+        <div class="stats-row">
+            <div class="stat-box">
+                Peso: <span id="massVal" style="color:#ff4757">50</span>kg
+                <input type="range" id="massRange" min="10" max="90" value="50">
+            </div>
         </div>
 
         <button onclick="joinLobby()">ENTRA IN LOBBY</button>
         
-        <div style="margin-top:20px; text-align:left; border-top:1px solid #444; padding-top:10px;">
-            <div style="font-size:0.8em; color:#888;">ARENE IN ATTESA:</div>
-            <div id="roomListContainer" style="font-size:0.9em; color:#666;">...</div>
+        <div id="active-rooms">
+            <div style="font-size:0.8em; color:#888; margin-bottom:5px;">ARENE IN ATTESA:</div>
+            <div id="roomListContainer" style="font-size:0.9em; color:#666; font-style:italic;">Caricamento...</div>
         </div>
     </div>
 
     <div id="lobbyScreen" class="panel">
-        <h1>In Attesa...</h1>
-        <div class="lobby-list" id="lobbyPlayerList"></div>
+        <h1>Sala d'Attesa</h1>
+        <div style="font-size:0.9em; color:#aaa;">Partecipanti pronti:</div>
+        
+        <div class="lobby-list" id="lobbyPlayerList">
+            </div>
+
         <div id="hostControls" style="display:none;">
             <button onclick="startMatch()">AVVIA PARTITA</button>
+            <div style="font-size:0.8em; color:#666; margin-top:5px;">Solo tu puoi avviare.</div>
         </div>
-        <div id="clientMsg" style="color:#aaa; margin-top:10px; font-style:italic;">
+        
+        <div id="clientMsg" style="color:#f1c40f; margin-top:15px; font-style:italic; display:none;">
             In attesa che l'Host avvii la partita...
         </div>
     </div>
 
     <div id="victoryScreen" class="panel">
-        <h1 style="color:#f1c40f">TORNEO FINITO</h1>
-        <table id="leaderboardTable"><thead><tr><th>#</th><th>PLAYER</th><th>PUNTI</th></tr></thead><tbody></tbody></table>
-        <button onclick="location.reload()" style="background:#2ed573;">MENU PRINCIPALE</button>
+        <h1 style="color:#f1c40f">CLASSIFICA FINALE</h1>
+        <table id="leaderboardTable">
+            <thead><tr><th>#</th><th>GIOCATORE</th><th>PUNTI</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <button onclick="location.reload()" style="background:#2ed573;">TORNA AL MENU</button>
+    </div>
+
+    <div id="topHud">
+        <div id="roundDisplay">ROUND 1 / 3</div>
+    </div>
+    <div id="overlayInstruction">Usa il Joystick (Touch) o Mouse (PC)</div>
+
+    <div id="centerMsg">
+        <div class="msg-box">
+            <div id="msgTitle" class="big-text">MESSAGGIO</div>
+            <div id="msgSub" class="sub-text">Sottotitolo</div>
+        </div>
     </div>
 
     <div id="joystickZone"></div>
-    <div id="roundInfo">ROUND 1</div>
-    <div id="overlay">Usa il Joystick per SPINGERE</div>
-    
-    <div id="roundEndMsg" style="display:none; position:absolute; top:30%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); padding:20px; border:2px solid #f1c40f; color:white; font-size:1.5em; z-index:30;">
-        VINCITORE ROUND:<br><span id="roundWinnerName" style="color:#f1c40f; font-weight:bold;"></span>
-    </div>
-    
-    <div id="spectatorMsg" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:2em; color:#ff4757; font-weight:bold; z-index:30; text-shadow:2px 2px 0 black;">
-        SEI ELIMINATO
-    </div>
-
     <canvas id="gameCanvas"></canvas>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -116,26 +158,29 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        // Stato Globale
         let myId = null;
         let gameRunning = false;
         let isSpectator = false;
         let dpr = 1;
-        
+
         // Input
         let joystickManager = null;
         let joystickActive = false;
         let joystickAngle = 0;
         let isPushing = false;
-        
-        // Skin
+        let mouseX = 0, mouseY = 0;
+
+        // Assets
         let mySkinData = null;
         const imageCache = {};
 
-        // === SETUP INIZIALE ===
-        // Load Skin
+        // === 1. GESTIONE SKIN E UI ===
+        // Carica skin salvata
         const savedSkin = localStorage.getItem('sumoSquareSkin');
         if (savedSkin) { mySkinData = savedSkin; document.getElementById('skinPreview').src = savedSkin; }
         
+        // Upload Skin
         document.getElementById('skinInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -143,10 +188,12 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
+                    // Ridimensiona a 100x100
                     const c = document.createElement('canvas');
                     const x = c.getContext('2d');
                     c.width = 100; c.height = 100;
                     x.drawImage(img, 0, 0, 100, 100);
+                    // Salva Base64
                     mySkinData = c.toDataURL('image/jpeg', 0.8);
                     document.getElementById('skinPreview').src = mySkinData;
                     localStorage.setItem('sumoSquareSkin', mySkinData);
@@ -156,19 +203,24 @@
             reader.readAsDataURL(file);
         });
 
-        // UI Helpers
+        // Update Slider UI
         document.getElementById('massRange').oninput = (e) => document.getElementById('massVal').innerText = e.target.value;
 
-        // Lista Stanze
+        // Lista Arene Login
         socket.on('room_list_update', (rooms) => {
             const el = document.getElementById('roomListContainer');
             if(rooms.length === 0) { el.innerHTML = "Nessuna arena in attesa."; return; }
             let h = '';
-            rooms.forEach(r => h += `<div onclick="document.getElementById('roomName').value='${r.name}'" style="cursor:pointer; padding:5px; background:#333; margin-top:2px; border-radius:4px;">${r.name} (${r.count})</div>`);
+            rooms.forEach(r => {
+                h += `<div class="room-item" onclick="document.getElementById('roomName').value='${r.name}'">
+                        <span>${r.name}</span>
+                        <span style="color:#2ed573">${r.count} in attesa</span>
+                      </div>`;
+            });
             el.innerHTML = h;
         });
 
-        // === LOGICA LOBBY ===
+        // === 2. LOGICA LOBBY ===
         function joinLobby() {
             const room = document.getElementById('roomName').value.trim();
             const name = document.getElementById('nickname').value.trim();
@@ -185,6 +237,11 @@
             });
         }
 
+        socket.on('connect', () => {
+            myId = socket.id;
+            console.log("Connesso con ID:", myId);
+        });
+
         socket.on('lobby_update', (data) => {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('lobbyScreen').style.display = 'block';
@@ -192,12 +249,17 @@
             const list = document.getElementById('lobbyPlayerList');
             let h = '';
             data.players.forEach(p => {
-                const badge = (p.id === data.hostId) ? '👑' : '';
-                h += `<div class="lobby-player"><span>${badge} ${p.name}</span><span>${p.mass}kg</span></div>`;
+                const isHostBadge = (p.id === data.hostId) ? '<span class="host-badge">👑</span>' : '';
+                const isMe = (p.id === myId) ? ' (Tu)' : '';
+                h += `<div class="lobby-player">
+                        <span>${isHostBadge}${p.name}${isMe}</span>
+                        <span style="color:#888; font-size:0.8em;">${p.mass}kg</span>
+                      </div>`;
             });
             list.innerHTML = h;
 
-            if (data.isHost) {
+            // FIX VISIBILITÀ BOTTONE HOST
+            if (myId === data.hostId) {
                 document.getElementById('hostControls').style.display = 'block';
                 document.getElementById('clientMsg').style.display = 'none';
             } else {
@@ -212,51 +274,62 @@
 
         socket.on('error_msg', (msg) => { alert(msg); location.reload(); });
 
-        // === LOGICA GIOCO ===
+        // === 3. LOGICA GIOCO ===
         socket.on('game_start', (data) => {
+            // Nascondi Lobby, Mostra Gioco
             document.getElementById('lobbyScreen').style.display = 'none';
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('roundInfo').style.display = 'block';
+            document.getElementById('gameCanvas').style.display = 'block';
             document.getElementById('joystickZone').style.display = 'block';
-            canvas.style.display = 'block';
+            document.getElementById('topHud').style.display = 'block';
+            document.getElementById('overlayInstruction').style.display = 'block';
             
             gameRunning = true;
             resize();
             initJoystick();
         });
 
-        socket.on('connect', () => myId = socket.id);
-
-        socket.on('you_died', () => {
+        // Eventi In-Game
+        socket.on('you_died', (data) => {
             isSpectator = true;
-            document.getElementById('spectatorMsg').style.display = 'block';
-        });
-
-        socket.on('respawn', () => {
-            isSpectator = false;
-            document.getElementById('spectatorMsg').style.display = 'none';
-            document.getElementById('roundEndMsg').style.display = 'none';
+            showCenterMsg("ELIMINATO", "Attendi il prossimo round...", '#ff4757');
         });
 
         socket.on('round_end', (data) => {
-            document.getElementById('roundWinnerName').innerText = data.winnerName;
-            document.getElementById('roundEndMsg').style.display = 'block';
+            showCenterMsg("FINE ROUND", `Vincitore: ${data.winnerName}`, '#f1c40f');
+        });
+
+        socket.on('respawn', (data) => {
+            isSpectator = false;
+            hideCenterMsg();
         });
 
         socket.on('game_over', (data) => {
             gameRunning = false;
+            document.getElementById('topHud').style.display = 'none';
+            hideCenterMsg();
             document.getElementById('victoryScreen').style.display = 'block';
-            document.getElementById('roundInfo').style.display = 'none';
             
             const tb = document.querySelector('#leaderboardTable tbody');
             tb.innerHTML = '';
             data.leaderboard.forEach((p, i) => {
-                tb.innerHTML += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
+                let rankClass = (i===0) ? 'rank-1' : (i===1 ? 'rank-2' : (i===2 ? 'rank-3' : ''));
+                tb.innerHTML += `<tr class="${rankClass}"><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
             });
+            
             if(joystickManager) joystickManager.destroy();
         });
 
-        // === RENDER & INPUT ===
+        function showCenterMsg(title, sub, color) {
+            const el = document.getElementById('centerMsg');
+            document.getElementById('msgTitle').innerText = title;
+            document.getElementById('msgTitle').style.color = color;
+            document.getElementById('msgSub').innerText = sub;
+            el.style.display = 'block';
+        }
+        function hideCenterMsg() { document.getElementById('centerMsg').style.display = 'none'; }
+
+
+        // === 4. INPUT E RENDER ===
         function initJoystick() {
             if(joystickManager) joystickManager.destroy();
             joystickManager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'dynamic', color: 'white' });
@@ -266,6 +339,12 @@
             joystickManager.on('end', () => joystickActive = false);
         }
 
+        // Mouse Input
+        function updatePos(cx, cy) { mouseX = cx - window.innerWidth/2; mouseY = cy - window.innerHeight/2; }
+        window.addEventListener('mousemove', e=>updatePos(e.clientX, e.clientY));
+        window.addEventListener('mousedown', ()=> { if(!joystickActive) isPushing=true; }); 
+        window.addEventListener('mouseup', ()=> { if(!joystickActive) isPushing=false; });
+
         function resize() {
             dpr = window.devicePixelRatio || 1;
             canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr;
@@ -274,77 +353,75 @@
         }
         window.onresize = resize;
 
+        // Loop Input
         setInterval(() => {
             if (!gameRunning) return;
-            // Se spettatore, non manda input
             if (isSpectator) return;
-
-            let finalAngle = joystickAngle;
-            let finalPush = joystickActive; 
+            let finalAngle = joystickActive ? joystickAngle : Math.atan2(mouseY, mouseX);
+            let finalPush = joystickActive ? true : isPushing;
             socket.emit('input', { angle: finalAngle, isPushing: finalPush });
         }, 50);
 
+        // Loop Render
         socket.on('state', (state) => {
             if (!gameRunning) return;
             
-            document.getElementById('roundInfo').innerText = `ROUND ${state.round} / ${state.totalRounds}`;
+            document.getElementById('roundDisplay').innerText = `ROUND ${state.round} / ${state.totalRounds}`;
 
             const w = window.innerWidth; const h = window.innerHeight;
             ctx.clearRect(0, 0, w, h);
             ctx.save();
             ctx.translate(w/2, h/2);
             
-            const scale = Math.min(1, (Math.min(w, h)/2) / (state.arenaRadius + 100));
+            // Zoom camera
+            const scale = Math.min(1, (Math.min(w, h)/2) / (state.arenaRadius + 150));
             ctx.scale(scale, scale);
 
-            // Arena (Cerchio)
+            // 1. Arena (Cerchio Rosso pericolo)
             ctx.beginPath();
             ctx.arc(0, 0, state.arenaRadius, 0, Math.PI * 2);
             ctx.fillStyle = '#222'; ctx.fill();
             ctx.lineWidth = 20; ctx.strokeStyle = '#d63031'; ctx.stroke();
 
-            // Giocatori (Quadrati)
+            // 2. Giocatori (Quadrati)
             for (let id in state.players) {
                 let p = state.players[id];
                 
                 ctx.save();
                 ctx.translate(p.x, p.y);
+                ctx.rotate(p.inputAngle); // Ruota il quadrato
                 
-                // Rotazione del quadrato in base alla direzione di input
-                ctx.rotate(p.inputAngle);
-                
-                // Disegna Skin o Colore
-                const size = p.radius * 2; // Lato del quadrato
+                const size = p.radius * 2;
                 const half = p.radius;
                 
-                // Disegno Quadrato con clip per la foto
-                ctx.beginPath();
-                ctx.rect(-half, -half, size, size); // Definisce area quadrata
-                ctx.save();
-                ctx.clip(); // Clip alla forma quadrata
+                // Disegna Skin/Colore
+                ctx.beginPath(); ctx.rect(-half, -half, size, size);
+                ctx.save(); ctx.clip();
 
                 if (p.skin) {
                     if (!imageCache[id]) { const i = new Image(); i.src = p.skin; imageCache[id] = i; }
                     try { ctx.drawImage(imageCache[id], -half, -half, size, size); } 
                     catch(e) { ctx.fillStyle = p.color; ctx.fillRect(-half, -half, size, size); }
                 } else {
-                    ctx.fillStyle = p.color;
-                    ctx.fillRect(-half, -half, size, size);
+                    ctx.fillStyle = p.color; ctx.fillRect(-half, -half, size, size);
                 }
-                ctx.restore(); // Rimuovi clip
+                ctx.restore();
 
-                // Bordo Quadrato
-                ctx.beginPath();
-                ctx.rect(-half, -half, size, size);
+                // Bordo
+                ctx.beginPath(); ctx.rect(-half, -half, size, size);
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
                 
-                ctx.restore(); // Ripristina rotazione e traslazione
+                // Occhi (per capire direzione)
+                ctx.fillStyle = "white";
+                ctx.fillRect(half/2, -half/2, 5, 5); // Occhio destro
+                ctx.fillRect(half/2, half/4, 5, 5);  // Occhio sinistro
 
-                // Nome (Non ruota)
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.scale(1/scale, 1/scale);
+                ctx.restore();
+
+                // Nome
+                ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1/scale, 1/scale);
                 ctx.fillStyle = 'white'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+                ctx.shadowColor="black"; ctx.shadowBlur=4;
                 ctx.fillText(p.name, 0, -(p.radius * scale) - 20);
                 ctx.restore();
             }
