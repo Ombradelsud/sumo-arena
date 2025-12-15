@@ -7,7 +7,7 @@
     <style>
         body { margin: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; }
 
-        /* --- STILI UI CONDIVISI --- */
+        /* UI GENERALE */
         .panel { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             text-align: center; background: rgba(15, 15, 15, 0.98); padding: 30px;
@@ -27,6 +27,10 @@
         button:hover { background: #ff6b81; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
         button:disabled { background: #555; cursor: not-allowed; transform: none; }
+
+        /* BOTTONE INVITO (Nuovo) */
+        .btn-invite { background: #3498db; margin-bottom: 15px; }
+        .btn-invite:hover { background: #2980b9; }
 
         /* 1. LOGIN SCREEN */
         .skin-upload-container { margin: 15px 0; cursor: pointer; position: relative; display: inline-block; }
@@ -111,10 +115,11 @@
 
     <div id="lobbyScreen" class="panel">
         <h1>Sala d'Attesa</h1>
-        <div style="font-size:0.9em; color:#aaa;">Partecipanti pronti:</div>
         
-        <div class="lobby-list" id="lobbyPlayerList">
-            </div>
+        <button class="btn-invite" onclick="copyInviteLink()">🔗 INVITA AMICI</button>
+        
+        <div style="font-size:0.9em; color:#aaa;">Partecipanti pronti:</div>
+        <div class="lobby-list" id="lobbyPlayerList"></div>
 
         <div id="hostControls" style="display:none;">
             <button onclick="startMatch()">AVVIA PARTITA</button>
@@ -132,7 +137,7 @@
             <thead><tr><th>#</th><th>GIOCATORE</th><th>PUNTI</th></tr></thead>
             <tbody></tbody>
         </table>
-        <button onclick="location.reload()" style="background:#2ed573;">TORNA AL MENU</button>
+        <button onclick="window.location.href='/'" style="background:#2ed573;">NUOVA PARTITA</button>
     </div>
 
     <div id="topHud">
@@ -158,6 +163,30 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        // --- 0. AUTO-COMPILAZIONE LINK INVITO ---
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const roomParam = params.get('room');
+            if(roomParam) {
+                document.getElementById('roomName').value = roomParam;
+                // Opzionale: scrollare o focus
+            }
+        };
+
+        // Funzione per copiare il link
+        function copyInviteLink() {
+            const room = document.getElementById('roomName').value;
+            // Genera l'URL base (senza parametri vecchi)
+            const baseUrl = window.location.origin + window.location.pathname;
+            const inviteUrl = `${baseUrl}?room=${encodeURIComponent(room)}`;
+            
+            navigator.clipboard.writeText(inviteUrl).then(() => {
+                alert("Link copiato! Invialo ai tuoi amici.");
+            }).catch(err => {
+                alert("Errore copia, ecco il link: " + inviteUrl);
+            });
+        }
+
         // Stato Globale
         let myId = null;
         let gameRunning = false;
@@ -176,11 +205,9 @@
         const imageCache = {};
 
         // === 1. GESTIONE SKIN E UI ===
-        // Carica skin salvata
         const savedSkin = localStorage.getItem('sumoSquareSkin');
         if (savedSkin) { mySkinData = savedSkin; document.getElementById('skinPreview').src = savedSkin; }
         
-        // Upload Skin
         document.getElementById('skinInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -188,12 +215,10 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    // Ridimensiona a 100x100
                     const c = document.createElement('canvas');
                     const x = c.getContext('2d');
                     c.width = 100; c.height = 100;
                     x.drawImage(img, 0, 0, 100, 100);
-                    // Salva Base64
                     mySkinData = c.toDataURL('image/jpeg', 0.8);
                     document.getElementById('skinPreview').src = mySkinData;
                     localStorage.setItem('sumoSquareSkin', mySkinData);
@@ -203,10 +228,8 @@
             reader.readAsDataURL(file);
         });
 
-        // Update Slider UI
         document.getElementById('massRange').oninput = (e) => document.getElementById('massVal').innerText = e.target.value;
 
-        // Lista Arene Login
         socket.on('room_list_update', (rooms) => {
             const el = document.getElementById('roomListContainer');
             if(rooms.length === 0) { el.innerHTML = "Nessuna arena in attesa."; return; }
@@ -258,7 +281,6 @@
             });
             list.innerHTML = h;
 
-            // FIX VISIBILITÀ BOTTONE HOST
             if (myId === data.hostId) {
                 document.getElementById('hostControls').style.display = 'block';
                 document.getElementById('clientMsg').style.display = 'none';
@@ -276,7 +298,6 @@
 
         // === 3. LOGICA GIOCO ===
         socket.on('game_start', (data) => {
-            // Nascondi Lobby, Mostra Gioco
             document.getElementById('lobbyScreen').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'block';
             document.getElementById('joystickZone').style.display = 'block';
@@ -288,7 +309,6 @@
             initJoystick();
         });
 
-        // Eventi In-Game
         socket.on('you_died', (data) => {
             isSpectator = true;
             showCenterMsg("ELIMINATO", "Attendi il prossimo round...", '#ff4757');
@@ -339,7 +359,6 @@
             joystickManager.on('end', () => joystickActive = false);
         }
 
-        // Mouse Input
         function updatePos(cx, cy) { mouseX = cx - window.innerWidth/2; mouseY = cy - window.innerHeight/2; }
         window.addEventListener('mousemove', e=>updatePos(e.clientX, e.clientY));
         window.addEventListener('mousedown', ()=> { if(!joystickActive) isPushing=true; }); 
@@ -353,7 +372,6 @@
         }
         window.onresize = resize;
 
-        // Loop Input
         setInterval(() => {
             if (!gameRunning) return;
             if (isSpectator) return;
@@ -362,7 +380,6 @@
             socket.emit('input', { angle: finalAngle, isPushing: finalPush });
         }, 50);
 
-        // Loop Render
         socket.on('state', (state) => {
             if (!gameRunning) return;
             
@@ -373,28 +390,27 @@
             ctx.save();
             ctx.translate(w/2, h/2);
             
-            // Zoom camera
             const scale = Math.min(1, (Math.min(w, h)/2) / (state.arenaRadius + 150));
             ctx.scale(scale, scale);
 
-            // 1. Arena (Cerchio Rosso pericolo)
+            // Arena
             ctx.beginPath();
             ctx.arc(0, 0, state.arenaRadius, 0, Math.PI * 2);
             ctx.fillStyle = '#222'; ctx.fill();
             ctx.lineWidth = 20; ctx.strokeStyle = '#d63031'; ctx.stroke();
 
-            // 2. Giocatori (Quadrati)
+            // Giocatori
             for (let id in state.players) {
                 let p = state.players[id];
                 
                 ctx.save();
                 ctx.translate(p.x, p.y);
-                ctx.rotate(p.inputAngle); // Ruota il quadrato
+                ctx.rotate(p.inputAngle); 
                 
                 const size = p.radius * 2;
                 const half = p.radius;
                 
-                // Disegna Skin/Colore
+                // Disegna Skin
                 ctx.beginPath(); ctx.rect(-half, -half, size, size);
                 ctx.save(); ctx.clip();
 
@@ -411,10 +427,10 @@
                 ctx.beginPath(); ctx.rect(-half, -half, size, size);
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
                 
-                // Occhi (per capire direzione)
+                // Occhi
                 ctx.fillStyle = "white";
-                ctx.fillRect(half/2, -half/2, 5, 5); // Occhio destro
-                ctx.fillRect(half/2, half/4, 5, 5);  // Occhio sinistro
+                ctx.fillRect(half/2, -half/2, 5, 5);
+                ctx.fillRect(half/2, half/4, 5, 5);
 
                 ctx.restore();
 
