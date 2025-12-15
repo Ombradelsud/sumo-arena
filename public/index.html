@@ -3,118 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sumo Arena HD</title>
+    <title>Sumo Box Arena</title>
     <style>
         body { margin: 0; overflow: hidden; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; touch-action: none; }
 
-        /* UI LOGIN */
-        #ui { 
+        /* UI GENERALE */
+        .panel { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            text-align: center; background: rgba(0, 0, 0, 0.95); padding: 30px;
+            text-align: center; background: rgba(10, 10, 10, 0.95); padding: 30px;
             border-radius: 15px; border: 1px solid #444; box-shadow: 0 0 50px rgba(0,0,0,0.8);
             z-index: 20; width: 350px; max-height: 90vh; overflow-y: auto;
         }
-        h1 { color: #ff4757; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 2px; font-size: 1.8em; }
+
+        h1 { color: #ff4757; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 2px; }
         
         input[type="text"], input[type="number"] {
             background: #333; border: 1px solid #555; color: white; padding: 10px;
             font-size: 1em; border-radius: 8px; width: 90%; text-align: center; margin-bottom: 10px; outline: none;
         }
-        input[type="text"]:focus, input[type="number"]:focus { border-color: #ff4757; }
-
-        .skin-upload-container { margin: 15px 0; cursor: pointer; position: relative; display: inline-block; }
-        #skinPreview { width: 80px; height: 80px; border-radius: 50%; background: #333; border: 3px solid #ff4757; object-fit: cover; }
-        #skinInput { display: none; }
-        .skin-label { display: block; font-size: 0.8em; color: #aaa; margin-top: 5px; }
-
-        .stats-box { display: flex; gap: 10px; margin: 15px 0; }
-        .stat { background: #222; padding: 8px; border-radius: 5px; flex: 1; border: 1px solid #333; font-size: 0.9em; }
-        input[type=range] { width: 100%; accent-color: #ff4757; cursor: pointer; }
         
-        #active-rooms { margin-top: 20px; text-align: left; border-top: 1px solid #444; padding-top: 10px; }
-        .room-item { background: #2d3436; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #444; }
-        .room-count { background: #222; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; color: #2ed573; }
-        
+        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        /* LOBBY ATTESA */
+        #lobbyScreen { display: none; }
+        .lobby-list { text-align: left; background: #222; padding: 10px; border-radius: 8px; margin: 10px 0; min-height: 100px; }
+        .lobby-player { padding: 5px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+        .is-host { color: #f1c40f; font-weight: bold; }
+
         /* GIOCO */
         #gameCanvas { display: none; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index: 1; }
         #joystickZone { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: none; }
-
-        #overlay { display: none; position: absolute; top: 50px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.6); font-weight: bold; z-index: 10; }
+        #roundInfo { display: none; position: absolute; top: 10px; width: 100%; text-align: center; font-size: 1.5em; font-weight: bold; color: #f1c40f; z-index: 10; pointer-events: none; text-shadow: 2px 2px 0 #000; }
+        #overlay { display: none; position: absolute; top: 50px; width: 100%; text-align: center; pointer-events: none; color: rgba(255,255,255,0.6); z-index: 10; }
         
-        #roundInfo { 
-            display: none; position: absolute; top: 10px; width: 100%; text-align: center; 
-            font-size: 1.5em; font-weight: bold; color: #f1c40f; text-shadow: 0 2px 4px black; z-index: 10; pointer-events: none; 
-        }
-
-        #spectatorMsg { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 3em; color: #ff4757; font-weight: bold; display: none; pointer-events: none; text-shadow: 0 0 20px black; text-align: center; z-index: 15;
-        }
-
-        #roundEndMsg {
-            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 10px; border: 2px solid #f1c40f;
-            font-size: 1.5em; color: white; text-align: center; display: none; z-index: 20; pointer-events: none;
-        }
-
-        #sidebar { display: none; position: absolute; top: 0; right: 0; width: 200px; height: 100%; background: rgba(0,0,0,0.5); padding: 10px; box-sizing: border-box; pointer-events: none; z-index: 10; }
-        .player-alive { color: #2ed573; margin-bottom: 3px; font-size: 0.9em; }
-        .player-dead { color: #ff4757; text-decoration: line-through; opacity: 0.7; font-size: 0.9em; }
-        
-        #victoryScreen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(10, 10, 10, 0.95); padding: 40px; border-radius: 20px; border: 2px solid #555; z-index: 100; width: 400px; }
-        .win-title { color: #f1c40f; font-size: 2.5em; font-weight: bold; margin-bottom: 20px; }
+        #victoryScreen { display: none; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th { border-bottom: 1px solid #555; padding: 10px; color: #aaa; }
-        td { padding: 10px; border-bottom: 1px solid #333; }
-        .rank-1 { color: #f1c40f; font-weight: bold; }
-        button { padding: 12px; font-size: 1.1em; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 50px; font-weight: bold; width: 100%; margin-top: 10px; }
+        td { padding: 8px; border-bottom: 1px solid #333; }
+        
+        /* Skin Preview */
+        .skin-upload-container { margin: 15px 0; cursor: pointer; }
+        #skinPreview { width: 70px; height: 70px; border-radius: 10px; border: 3px solid #ff4757; object-fit: cover; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <h1>Sumo Arena HD</h1>
+    <div id="loginScreen" class="panel">
+        <h1>Sumo Box</h1>
         
         <div class="skin-upload-container" onclick="document.getElementById('skinInput').click()">
-            <img id="skinPreview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Foto">
-            <input type="file" id="skinInput" accept="image/*">
-            <span class="skin-label">📷 Carica Foto</span>
+            <img id="skinPreview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+            <input type="file" id="skinInput" accept="image/*" style="display:none">
+            <div style="font-size:0.8em; color:#aaa">Carica Foto</div>
         </div>
 
-        <input type="text" id="nickname" placeholder="Il tuo Nome" maxlength="12">
+        <input type="text" id="nickname" placeholder="Tuo Nome" maxlength="12">
         <input type="text" id="roomName" placeholder="Nome Arena" maxlength="15">
         
-        <div style="display:flex; gap:10px; align-items:center; justify-content:center; margin-bottom:10px;">
-            <label>Round:</label>
-            <input type="number" id="roundsInput" min="1" max="10" value="3" style="width:60px; margin:0;">
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
+            <label>Round (Max 10):</label>
+            <input type="number" id="roundsInput" min="1" max="10" value="3" style="width:60px;">
         </div>
 
-        <div class="stats-box">
-            <div class="stat"><label>PESO: <span id="massVal">50</span></label><input type="range" id="massRange" min="10" max="90" value="50"></div>
-            <div class="stat"><label>GRIP: <span id="fricVal">50</span></label><progress id="fricBar" value="50" max="90" style="width:100%; height:5px;"></progress></div>
+        <div style="display:flex; gap:10px; margin:10px 0;">
+            <div style="flex:1; background:#222; padding:5px; border-radius:5px;">Peso: <span id="massVal">50</span><br><input type="range" id="massRange" min="10" max="90" value="50" style="width:100%"></div>
         </div>
-        <button onclick="joinGame()">ENTRA / CREA</button>
-        <div id="active-rooms"><div class="room-header">Arene Attive</div><div id="roomListContainer" style="color:#666; font-size:0.9em;">Caricamento...</div></div>
+
+        <button onclick="joinLobby()">ENTRA IN LOBBY</button>
+        
+        <div style="margin-top:20px; text-align:left; border-top:1px solid #444; padding-top:10px;">
+            <div style="font-size:0.8em; color:#888;">ARENE IN ATTESA:</div>
+            <div id="roomListContainer" style="font-size:0.9em; color:#666;">...</div>
+        </div>
+    </div>
+
+    <div id="lobbyScreen" class="panel">
+        <h1>In Attesa...</h1>
+        <div class="lobby-list" id="lobbyPlayerList"></div>
+        <div id="hostControls" style="display:none;">
+            <button onclick="startMatch()">AVVIA PARTITA</button>
+        </div>
+        <div id="clientMsg" style="color:#aaa; margin-top:10px; font-style:italic;">
+            In attesa che l'Host avvii la partita...
+        </div>
+    </div>
+
+    <div id="victoryScreen" class="panel">
+        <h1 style="color:#f1c40f">TORNEO FINITO</h1>
+        <table id="leaderboardTable"><thead><tr><th>#</th><th>PLAYER</th><th>PUNTI</th></tr></thead><tbody></tbody></table>
+        <button onclick="location.reload()" style="background:#2ed573;">MENU PRINCIPALE</button>
     </div>
 
     <div id="joystickZone"></div>
-    <div id="roundInfo">ROUND 1 / 3</div>
-    <div id="overlay">Clicca o Usa il Joystick per SPINGERE</div>
+    <div id="roundInfo">ROUND 1</div>
+    <div id="overlay">Usa il Joystick per SPINGERE</div>
     
-    <div id="spectatorMsg">ELIMINATO<br><span style="font-size:0.4em; color:white">Attendi il prossimo round...</span></div>
-    
-    <div id="roundEndMsg">
-        <div style="font-size:0.8em; color:#aaa">ROUND VINTO DA</div>
-        <div id="roundWinnerName" style="color:#f1c40f; font-size:1.5em; font-weight:bold; margin:10px 0;">Nome</div>
-        <div style="font-size:0.8em;">Prossimo round in 3s...</div>
+    <div id="roundEndMsg" style="display:none; position:absolute; top:30%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); padding:20px; border:2px solid #f1c40f; color:white; font-size:1.5em; z-index:30;">
+        VINCITORE ROUND:<br><span id="roundWinnerName" style="color:#f1c40f; font-weight:bold;"></span>
     </div>
-
-    <div id="sidebar"><div style="color:#aaa; border-bottom:1px solid #444; margin-bottom:5px;">IN GARA</div><div id="playerList"></div></div>
     
-    <div id="victoryScreen">
-        <div class="win-title">TORNEO FINITO</div>
-        <table id="leaderboardTable"><thead><tr><th>#</th><th>GIOCATORE</th><th>VITTORIE</th></tr></thead><tbody></tbody></table>
-        <button onclick="location.reload()" style="background:#2ed573;">TORNA ALLA LOBBY</button>
+    <div id="spectatorMsg" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:2em; color:#ff4757; font-weight:bold; z-index:30; text-shadow:2px 2px 0 black;">
+        SEI ELIMINATO
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -126,24 +115,27 @@
         const socket = io();
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const uiDiv = document.getElementById('ui');
         
         let myId = null;
-        let isSpectator = false;
         let gameRunning = false;
+        let isSpectator = false;
         let dpr = 1;
         
-        let mouseX = 0, mouseY = 0;
-        let isPushing = false;
+        // Input
         let joystickManager = null;
         let joystickActive = false;
         let joystickAngle = 0;
+        let isPushing = false;
         
+        // Skin
         let mySkinData = null;
         const imageCache = {};
-        const savedSkin = localStorage.getItem('sumoSkin');
-        if (savedSkin) { mySkinData = savedSkin; document.getElementById('skinPreview').src = savedSkin; }
 
+        // === SETUP INIZIALE ===
+        // Load Skin
+        const savedSkin = localStorage.getItem('sumoSquareSkin');
+        if (savedSkin) { mySkinData = savedSkin; document.getElementById('skinPreview').src = savedSkin; }
+        
         document.getElementById('skinInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -151,117 +143,128 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = 100; tempCanvas.height = 100;
-                    tempCtx.drawImage(img, 0, 0, 100, 100);
-                    mySkinData = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    const c = document.createElement('canvas');
+                    const x = c.getContext('2d');
+                    c.width = 100; c.height = 100;
+                    x.drawImage(img, 0, 0, 100, 100);
+                    mySkinData = c.toDataURL('image/jpeg', 0.8);
                     document.getElementById('skinPreview').src = mySkinData;
-                    localStorage.setItem('sumoSkin', mySkinData);
+                    localStorage.setItem('sumoSquareSkin', mySkinData);
                 }
                 img.src = event.target.result;
             }
             reader.readAsDataURL(file);
         });
 
-        const massInput = document.getElementById('massRange');
-        massInput.oninput = () => {
-            let m = parseInt(massInput.value);
-            document.getElementById('massVal').innerText = m;
-            document.getElementById('fricVal').innerText = 100 - m;
-            document.getElementById('fricBar').value = 100 - m;
-        };
+        // UI Helpers
+        document.getElementById('massRange').oninput = (e) => document.getElementById('massVal').innerText = e.target.value;
 
+        // Lista Stanze
         socket.on('room_list_update', (rooms) => {
-            const container = document.getElementById('roomListContainer');
-            if(rooms.length === 0) { container.innerHTML = "Nessuna arena attiva."; return; }
-            let html = '';
-            rooms.forEach(room => {
-                let countClass = room.count >= 20 ? 'room-full' : 'room-count';
-                html += `<div class="room-item" onclick="document.getElementById('roomName').value='${room.name}'"><span>${room.name}</span><span class="${countClass}">${room.count}/20</span></div>`;
-            });
-            container.innerHTML = html;
+            const el = document.getElementById('roomListContainer');
+            if(rooms.length === 0) { el.innerHTML = "Nessuna arena in attesa."; return; }
+            let h = '';
+            rooms.forEach(r => h += `<div onclick="document.getElementById('roomName').value='${r.name}'" style="cursor:pointer; padding:5px; background:#333; margin-top:2px; border-radius:4px;">${r.name} (${r.count})</div>`);
+            el.innerHTML = h;
         });
 
-        function joinGame() {
-            let room = document.getElementById('roomName').value.trim();
-            let name = document.getElementById('nickname').value.trim();
-            let rounds = document.getElementById('roundsInput').value;
-            if(!room) { alert("Scegli un'arena!"); return; }
-            if(!name) name = "Combattente";
+        // === LOGICA LOBBY ===
+        function joinLobby() {
+            const room = document.getElementById('roomName').value.trim();
+            const name = document.getElementById('nickname').value.trim();
+            const rounds = document.getElementById('roundsInput').value;
+            
+            if(!room) { alert("Inserisci nome arena!"); return; }
             
             socket.emit('join_game', { 
                 room: room, 
-                name: name, 
-                mass: parseInt(massInput.value), 
+                name: name || "Boxer", 
+                mass: parseInt(document.getElementById('massRange').value), 
                 skin: mySkinData,
-                totalRounds: rounds // INVIO NUMERO ROUND
+                totalRounds: rounds 
             });
         }
 
-        socket.on('joined_success', (data) => {
-            uiDiv.style.display = 'none';
+        socket.on('lobby_update', (data) => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+            
+            const list = document.getElementById('lobbyPlayerList');
+            let h = '';
+            data.players.forEach(p => {
+                const badge = (p.id === data.hostId) ? '👑' : '';
+                h += `<div class="lobby-player"><span>${badge} ${p.name}</span><span>${p.mass}kg</span></div>`;
+            });
+            list.innerHTML = h;
+
+            if (data.isHost) {
+                document.getElementById('hostControls').style.display = 'block';
+                document.getElementById('clientMsg').style.display = 'none';
+            } else {
+                document.getElementById('hostControls').style.display = 'none';
+                document.getElementById('clientMsg').style.display = 'block';
+            }
+        });
+
+        function startMatch() {
+            socket.emit('start_match');
+        }
+
+        socket.on('error_msg', (msg) => { alert(msg); location.reload(); });
+
+        // === LOGICA GIOCO ===
+        socket.on('game_start', (data) => {
+            document.getElementById('lobbyScreen').style.display = 'none';
             document.getElementById('overlay').style.display = 'block';
-            document.getElementById('sidebar').style.display = 'block';
-            document.getElementById('joystickZone').style.display = 'block';
             document.getElementById('roundInfo').style.display = 'block';
+            document.getElementById('joystickZone').style.display = 'block';
             canvas.style.display = 'block';
+            
             gameRunning = true;
-            resize(); 
+            resize();
             initJoystick();
         });
 
-        function initJoystick() {
-            if(joystickManager) joystickManager.destroy();
-            joystickManager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'dynamic', color: 'white', size: 100 });
-            joystickManager.on('move', (evt, data) => { joystickActive = true; if(data && data.angle) { joystickAngle = -data.angle.radian; isPushing = true; } });
-            joystickManager.on('end', () => { joystickActive = false; isPushing = false; });
-        }
-
         socket.on('connect', () => myId = socket.id);
-        
-        // MORTE NEL ROUND
-        socket.on('you_died', () => { 
-            isSpectator = true; 
-            document.getElementById('spectatorMsg').style.display = 'block'; 
-            document.getElementById('overlay').style.display = 'none'; 
+
+        socket.on('you_died', () => {
+            isSpectator = true;
+            document.getElementById('spectatorMsg').style.display = 'block';
         });
 
-        // FINE DI UN SINGOLO ROUND
+        socket.on('respawn', () => {
+            isSpectator = false;
+            document.getElementById('spectatorMsg').style.display = 'none';
+            document.getElementById('roundEndMsg').style.display = 'none';
+        });
+
         socket.on('round_end', (data) => {
             document.getElementById('roundWinnerName').innerText = data.winnerName;
             document.getElementById('roundEndMsg').style.display = 'block';
         });
 
-        // RESPAWN (NUOVO ROUND)
-        socket.on('respawn', (data) => {
-            isSpectator = false; // Torni vivo!
-            document.getElementById('spectatorMsg').style.display = 'none';
-            document.getElementById('roundEndMsg').style.display = 'none';
-            document.getElementById('overlay').style.display = 'block';
-        });
-
-        // FINE TORNEO
         socket.on('game_over', (data) => {
             gameRunning = false;
             document.getElementById('victoryScreen').style.display = 'block';
             document.getElementById('roundInfo').style.display = 'none';
-            document.getElementById('roundEndMsg').style.display = 'none';
             
-            const tbody = document.querySelector('#leaderboardTable tbody');
-            tbody.innerHTML = '';
-            // Classifica basata su SCORE (vittorie)
-            data.leaderboard.forEach((p, index) => {
-                let rankClass = index === 0 ? 'rank-1' : '';
-                tbody.innerHTML += `<tr class="${rankClass}"><td>#${index+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
+            const tb = document.querySelector('#leaderboardTable tbody');
+            tb.innerHTML = '';
+            data.leaderboard.forEach((p, i) => {
+                tb.innerHTML += `<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
             });
             if(joystickManager) joystickManager.destroy();
         });
 
-        function updatePos(cx, cy) { mouseX = cx - window.innerWidth/2; mouseY = cy - window.innerHeight/2; }
-        window.addEventListener('mousemove', e=>updatePos(e.clientX, e.clientY));
-        window.addEventListener('mousedown', ()=> { if(!joystickActive) isPushing=true; }); 
-        window.addEventListener('mouseup', ()=> { if(!joystickActive) isPushing=false; });
+        // === RENDER & INPUT ===
+        function initJoystick() {
+            if(joystickManager) joystickManager.destroy();
+            joystickManager = nipplejs.create({ zone: document.getElementById('joystickZone'), mode: 'dynamic', color: 'white' });
+            joystickManager.on('move', (evt, data) => { 
+                if(data && data.angle) { joystickActive = true; joystickAngle = -data.angle.radian; }
+            });
+            joystickManager.on('end', () => joystickActive = false);
+        }
 
         function resize() {
             dpr = window.devicePixelRatio || 1;
@@ -272,77 +275,78 @@
         window.onresize = resize;
 
         setInterval(() => {
-            if (!gameRunning || !myId || isSpectator) return;
-            let finalAngle = joystickActive ? joystickAngle : Math.atan2(mouseY, mouseX);
-            let finalPush = joystickActive ? true : isPushing;
+            if (!gameRunning) return;
+            // Se spettatore, non manda input
+            if (isSpectator) return;
+
+            let finalAngle = joystickAngle;
+            let finalPush = joystickActive; 
             socket.emit('input', { angle: finalAngle, isPushing: finalPush });
         }, 50);
 
         socket.on('state', (state) => {
             if (!gameRunning) return;
-
-            // Aggiorna Round Info
+            
             document.getElementById('roundInfo').innerText = `ROUND ${state.round} / ${state.totalRounds}`;
 
-            let listHtml = '';
-            for(let id in state.players) listHtml += `<div class="player-alive">${state.players[id].name}</div>`;
-            state.eliminated.forEach(p => listHtml += `<div class="player-dead">${p.name} #${p.rank}</div>`);
-            document.getElementById('playerList').innerHTML = listHtml;
-
-            const w = window.innerWidth;
-            const h = window.innerHeight;
+            const w = window.innerWidth; const h = window.innerHeight;
             ctx.clearRect(0, 0, w, h);
             ctx.save();
             ctx.translate(w/2, h/2);
+            
             const scale = Math.min(1, (Math.min(w, h)/2) / (state.arenaRadius + 100));
             ctx.scale(scale, scale);
 
-            // Arena
+            // Arena (Cerchio)
             ctx.beginPath();
             ctx.arc(0, 0, state.arenaRadius, 0, Math.PI * 2);
             ctx.fillStyle = '#222'; ctx.fill();
-            ctx.lineWidth = 20; ctx.strokeStyle = isSpectator?'#555':'#d63031'; ctx.stroke();
+            ctx.lineWidth = 20; ctx.strokeStyle = '#d63031'; ctx.stroke();
 
-            // Players
+            // Giocatori (Quadrati)
             for (let id in state.players) {
                 let p = state.players[id];
-                ctx.save(); 
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.clip(); 
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                
+                // Rotazione del quadrato in base alla direzione di input
+                ctx.rotate(p.inputAngle);
+                
+                // Disegna Skin o Colore
+                const size = p.radius * 2; // Lato del quadrato
+                const half = p.radius;
+                
+                // Disegno Quadrato con clip per la foto
+                ctx.beginPath();
+                ctx.rect(-half, -half, size, size); // Definisce area quadrata
+                ctx.save();
+                ctx.clip(); // Clip alla forma quadrata
+
                 if (p.skin) {
-                    if (!imageCache[id]) { const img = new Image(); img.src = p.skin; imageCache[id] = img; }
-                    try { ctx.drawImage(imageCache[id], p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2); } 
-                    catch(e) { ctx.fillStyle = p.color; ctx.fill(); }
+                    if (!imageCache[id]) { const i = new Image(); i.src = p.skin; imageCache[id] = i; }
+                    try { ctx.drawImage(imageCache[id], -half, -half, size, size); } 
+                    catch(e) { ctx.fillStyle = p.color; ctx.fillRect(-half, -half, size, size); }
                 } else {
-                    ctx.fillStyle = p.color; ctx.fill();
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-half, -half, size, size);
                 }
+                ctx.restore(); // Rimuovi clip
+
+                // Bordo Quadrato
+                ctx.beginPath();
+                ctx.rect(-half, -half, size, size);
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+                
+                ctx.restore(); // Ripristina rotazione e traslazione
+
+                // Nome (Non ruota)
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.scale(1/scale, 1/scale);
+                ctx.fillStyle = 'white'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText(p.name, 0, -(p.radius * scale) - 20);
                 ctx.restore();
-
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
-
-                ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1/scale, 1/scale);
-                ctx.fillStyle='white'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
-                ctx.shadowColor="black"; ctx.shadowBlur=4;
-                ctx.fillText(p.name, 0, -(p.radius * scale) - 15);
-                ctx.restore();
-
-                if (id === myId && !isSpectator) {
-                    ctx.save(); ctx.translate(p.x, p.y); 
-                    let displayAngle = joystickActive ? joystickAngle : Math.atan2(mouseY, mouseX);
-                    ctx.rotate(displayAngle);
-                    ctx.beginPath(); let len = p.radius + 40;
-                    let showingPush = isPushing || joystickActive;
-                    if(showingPush){
-                        ctx.strokeStyle='#ff4757'; ctx.lineWidth=6;
-                        ctx.moveTo(p.radius,0); ctx.lineTo(len,0); ctx.stroke();
-                        ctx.beginPath(); ctx.fillStyle='#ff4757'; ctx.moveTo(len+10,0); ctx.lineTo(len,-8); ctx.lineTo(len,8); ctx.fill();
-                    } else {
-                        ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=3; ctx.setLineDash([5,5]);
-                        ctx.moveTo(p.radius,0); ctx.lineTo(len,0); ctx.stroke();
-                    }
-                    ctx.restore();
-                }
             }
             ctx.restore();
         });
